@@ -1,11 +1,27 @@
 #!/bin/bash
 
-# Prompt for private key at the start
+# Prompt for private key
 echo -e "\033[34mEnter your private key: \033[0m"
 read -s PRIVATE_KEY
 if [ -z "$PRIVATE_KEY" ]; then
     echo -e "\033[31mError: Private key cannot be empty.\033[0m"
     exit 1
+fi
+
+# Prompt for blockchain RPC endpoint
+echo -e "\033[34mEnter your blockchain RPC endpoint (e.g., https://0g-newton-testnet.drpc.org): \033[0m"
+read -r RPC_ENDPOINT
+if [ -z "$RPC_ENDPOINT" ]; then
+    echo -e "\033[31mError: RPC endpoint cannot be empty.\033[0m"
+    exit 1
+fi
+
+# Optional: Test RPC endpoint connectivity
+echo "Testing RPC endpoint connectivity..."
+if ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' "$RPC_ENDPOINT" >/dev/null; then
+    echo -e "\033[33mWarning: Could not connect to RPC endpoint. Proceeding anyway, but verify the endpoint is correct.\033[0m"
+else
+    echo -e "\033[32mRPC endpoint is reachable.\033[0m"
 fi
 
 # Step 1: Install dependencies
@@ -52,10 +68,11 @@ cargo build --release || { echo -e "\033[31mBuild failed.\033[0m"; exit 1; }
 echo "Downloading configuration file..."
 wget -O $HOME/0g-storage-node/run/config-testnet-turbo.toml https://josephtran.co/config-testnet-turbo.toml
 
-# Step 6: Set miner key
-echo "Setting miner key..."
+# Step 6: Set miner key and RPC endpoint
+echo "Setting miner key and RPC endpoint..."
 sed -i "s|^\s*#\?\s*miner_key\s*=.*|miner_key = \"$PRIVATE_KEY\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
-echo -e "\033[32mPrivate key has been successfully added to the config file.\033[0m"
+sed -i "s|^\s*#\?\s*blockchain_rpc_endpoint\s*=.*|blockchain_rpc_endpoint = \"$RPC_ENDPOINT\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
+echo -e "\033[32mPrivate key and RPC endpoint have been successfully added to the config file.\033[0m"
 
 # Step 7: Verify configuration
 echo "Verifying configuration changes..."
