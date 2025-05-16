@@ -16,7 +16,7 @@ if [ -z "$RPC_ENDPOINT" ]; then
     exit 1
 fi
 
-# Optional: Test RPC endpoint connectivity
+# Test RPC endpoint connectivity
 echo "Testing RPC endpoint connectivity..."
 if ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' "$RPC_ENDPOINT" >/dev/null; then
     echo -e "\033[33mWarning: Could not connect to RPC endpoint. Proceeding anyway, but verify the endpoint is correct.\033[0m"
@@ -45,14 +45,23 @@ else
     echo "Go is already installed, skipping..."
 fi
 
-# Step 3: Install rustup (skip if already installed)
-if ! command -v rustup &> /dev/null; then
-    echo "Installing rustup..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    . "$HOME/.cargo/env"
-else
-    echo "rustup is already installed, skipping..."
+# Step 3: Install or update rustup
+echo "Checking Rust and rustup installation..."
+if command -v rustc &> /dev/null && [[ $(rustc --version) == *"nightly"* || $(rustc --version) == *"beta"* ]]; then
+    echo -e "\033[33mWarning: Non-stable Rust version detected. The 0g storage node requires a stable Rust version.\033[0m"
 fi
+if command -v rustup &> /dev/null; then
+    echo "rustup is already installed, updating..."
+    rustup update stable || { echo -e "\033[31mFailed to update rustup.\033[0m"; exit 1; }
+else
+    echo "Installing rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable || { echo -e "\033[31mFailed to install rustup.\033[0m"; exit 1; }
+    . "$HOME/.cargo/env"
+fi
+# Ensure stable toolchain
+echo "Setting Rust stable toolchain..."
+rustup default stable || { echo -e "\033[31mFailed to set stable toolchain.\033[0m"; exit 1; }
+rustc --version
 
 # Step 4: Download and build 0g-storage-node
 echo "Downloading and building 0g-storage-node..."
@@ -71,7 +80,7 @@ wget -O $HOME/0g-storage-node/run/config-testnet-turbo.toml https://josephtran.c
 # Step 6: Set miner key and RPC endpoint
 echo "Setting miner key and RPC endpoint..."
 sed -i "s|^\s*#\?\s*miner_key\s*=.*|miner_key = \"$PRIVATE_KEY\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
-sed -i "s|^\s*#\?\s*blockchain_rpc_endpoint\s*=.*|blockchain_rpc_endpoint = \"$RPC_ENDPOINT\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
+sed -i "s|^\s*#\ |blockchain_rpc_endpoint\s*=.*|blockchain_rpc_endpoint = \"$RPC_ENDPOINT\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
 echo -e "\033[32mPrivate key and RPC endpoint have been successfully added to the config file.\033[0m"
 
 # Step 7: Verify configuration
