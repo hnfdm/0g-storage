@@ -79,6 +79,7 @@ wget -O $HOME/0g-storage-node/run/config-testnet-turbo.toml https://josephtran.c
 
 # Step 6: Set miner key and RPC endpoint
 echo "Setting miner key and RPC endpoint..."
+# Replace these lines in your script:
 sed -i "s|^\s*#\?\s*miner_key\s*=.*|miner_key = \"$PRIVATE_KEY\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
 sed -i "s|^\s*#\ |blockchain_rpc_endpoint\s*=.*|blockchain_rpc_endpoint = \"$RPC_ENDPOINT\"|" $HOME/0g-storage-node/run/config-testnet-turbo.toml
 echo -e "\033[32mPrivate key and RPC endpoint have been successfully added to the config file.\033[0m"
